@@ -58,7 +58,11 @@ function deriveResult(phase, score, status) {
 }
 
 async function run() {
-  const res = await fetch(WC_URL, { headers: { 'X-Auth-Token': FOOTBALL_DATA_TOKEN } });
+  const res = await fetch(WC_URL, { headers: {
+    'X-Auth-Token': FOOTBALL_DATA_TOKEN,
+    'User-Agent': 'worldcup-pickem-sync',
+    'Accept': 'application/json',
+  } });
   if (!res.ok) throw new Error(`football-data.org ${res.status}: ${await res.text()}`);
   const { matches = [] } = await res.json();
 

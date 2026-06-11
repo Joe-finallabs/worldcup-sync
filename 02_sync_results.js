@@ -96,14 +96,17 @@ async function run() {
   const liveWindow = rows.some((r) => r.status !== 'FINISHED'
     && new Date(r.kickoff_utc).getTime() <= now
     && now <= new Date(r.kickoff_utc).getTime() + LIVE_WINDOW_MIN*60000);
-  let overlaid = 0;
+  let overlaid = 0, afLiveWC = 0;
   if (liveWindow && APIFOOTBALL_KEY) {
     try {
-      const af = await fetch('https://v3.football.api-sports.io/fixtures?league=1&season=2026&live=all',
+      // live=all returns every in-play fixture worldwide; we filter to the World Cup (league id 1).
+      const af = await fetch('https://v3.football.api-sports.io/fixtures?live=all',
         { headers: { 'x-apisports-key': APIFOOTBALL_KEY } });
       if (af.ok) {
         const data = await af.json();
         for (const fx of (data.response || [])) {
+          if (fx.league?.id !== 1) continue;   // World Cup only
+          afLiveWC++;
           const d = (fx.fixture?.date || '').slice(0,10);
           const hn = canon(fx.teams?.home?.name), an = canon(fx.teams?.away?.name);
           const gh = fx.goals?.home, ga = fx.goals?.away;
@@ -130,7 +133,7 @@ async function run() {
   const { error } = await supabase.from('matches').upsert(rows, { onConflict: 'id' });
   if (error) throw error;
   console.log(`Synced ${rows.length} matches (${rows.filter(r=>r.status==='FINISHED').length} finished, `
-    + `${before-rows.length} admin-locked skipped). Live window: ${liveWindow}, live scores overlaid: ${overlaid}.`);
+    + `${before-rows.length} admin-locked skipped). Live window: ${liveWindow}, AF live WC fixtures: ${afLiveWC}, overlaid: ${overlaid}.`);
 }
 
 run().catch((e) => { console.error(e); process.exit(1); });
